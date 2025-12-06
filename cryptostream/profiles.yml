@@ -1,0 +1,25 @@
+cryptostream:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('PROJECT_ID', 'wagon-bootcamp-466414') }}"
+      dataset: cryptostream
+      location: europe-west1
+      threads: 2
+      priority: interactive
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+
+    prod:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('PROJECT_ID', 'wagon-bootcamp-466414') }}"
+      dataset: cryptostream
+      location: europe-west1
+      threads: 2
+      priority: batch
+      job_execution_timeout_seconds: 300
+      job_retries: 1
