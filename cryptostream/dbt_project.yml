@@ -32,5 +32,14 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   cryptostream:
     # Config indicated by + and applies to all files under models/example/
-    example:
+    staging:
+      +schema: cryptostream_silver
       +materialized: view
+
+    silver:
+      +schema: cryptostream_silver
+      +materialized: incremental
+
+    gold:
+      +schema: cryptostream_gold
+      +materialized: table

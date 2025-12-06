@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: trades
+    description: >
+      Camada silver de trades da Binance Spot. Dados já tipados e normalizados a partir
+      do staging, com deduplicação técnica (reentrega/replay do pipeline) e filtros mínimos
+      de integridade. Pronta para agregações na camada gold (OHLCV, volume, métricas de mercado).
+      Regras de integridade numérica (price > 0, qty > 0) são aplicadas no modelo SQL.
+
+    tests:
+      # garante unicidade real do trade (chave composta)
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'trade_id']
+
+    columns:
+      - name: stream
+        description: >
+          Identificador do stream de origem no WebSocket (ex.: btcusdt@trade).
+          Útil para auditoria e rastreio da fonte.
+        tests:
+          - not_null
+
+      - name: ingest_ts
+        description: >
+          Timestamp de ingestão do pipeline (quando a mensagem foi persistida no bronze).
+          Usado para auditoria de atraso e desempate na deduplicação.
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp do evento usado para particionamento (derivado de payload.T).
+          Representa o momento do trade no mercado.
+        tests:
+          - not_null
+
+      - name: trade_ts
+        description: >
+          Timestamp exato do trade convertido do payload.T (trade time em ms).
+          Normalmente igual a event_ts, mas mantido explicitamente para clareza.
+        tests:
+          - not_null
+
+      - name: event_time_ws
+        description: >
+          Event time do WebSocket (payload.E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: >
+          Par de negociação normalizado em uppercase (ex.: BTCUSDT, ETHUSDT).
+        tests:
+          - not_null
+
+      - name: trade_id
+        description: >
+          ID único do trade por símbolo (payload.t). Chave natural do evento.
+        tests:
+          - not_null
+
+      - name: price
+        description: >
+          Preço unitário do trade (payload.p convertido de string para NUMERIC).
+          A integridade price > 0 é garantida no SQL do modelo silver.
+        tests:
+          - not_null
+
+      - name: qty
+        description: >
+          Quantidade negociada (payload.q convertido de string para NUMERIC).
+          A integridade qty > 0 é garantida no SQL do modelo silver.
+        tests:
+          - not_null
+
+      - name: is_buyer_maker
+        description: >
+          Booleano (payload.m). True se o comprador foi market maker.
+          Útil para análises taker vs maker.
+        tests:
+          - not_null
+
+      - name: event_date
+        description: >
+          Data do evento derivada de event_ts. Ajuda em agregações diárias
+          e filtros rápidos no gold.
+        tests:
+          - not_null
+
+      - name: minute_bucket
+        description: >
+          event_ts truncado para minuto. Base direta para OHLCV 1m em gold.
+        tests:
+          - not_null
+
+      - name: hour_bucket
+        description: >
+          event_ts truncado para hora. Base para agregações horárias em gold.
+        tests:
+          - not_null
