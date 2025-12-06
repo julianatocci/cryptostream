@@ -1,72 +1,58 @@
-# ---------------------------
-# Python
-# ---------------------------
+# --------------------
+# dbt (artefatos gerados)
+# --------------------
+target/
+logs/
+dbt_modules/          # legado (alguns projetos antigos usam)
+dbt_packages/         # baixado via `dbt deps`
+
+# --------------------
+# Python / Poetry
+# --------------------
+.venv/
+venv/
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.so
 *.egg-info/
 dist/
 build/
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Python tooling caches
+.poetry/
+pip-wheel-metadata/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-.coverage
-htmlcov/
 
-# Jupyter
+# --------------------
+# Jupyter / notebooks
+# --------------------
 .ipynb_checkpoints/
 
-# ---------------------------
-# Poetry
-# ---------------------------
-# lock file SHOULD be committed
-# poetry.lock
-
-# poetry cache (optional)
-.cache/pypoetry/
-.cache/poetry/
-
-# ---------------------------
-# dbt
-# ---------------------------
-target/
-dbt_packages/
-logs/
-log/
-dbt.log
-.user.yml
-
-# If you keep profiles locally (recommended)
-profiles.yml
-
-# ---------------------------
-# Secrets / credentials
-# ---------------------------
-*.env
-.env.*
-*.key
-*.pem
-credentials/
-secrets/
-**/service-account*.json
-**/*gcp*.json
-
-# ---------------------------
-# OS / Editor
-# ---------------------------
+# --------------------
+# OS / editores
+# --------------------
 .DS_Store
 Thumbs.db
-
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
+
+# --------------------
+# Secrets / credenciais / configs locais
+# --------------------
+.env
+.env.*
+*.env
+profiles.yml          # NÃO versionar se tiver credenciais
+**/*service-account*.json
+**/*gcp-key*.json
+**/*credentials*.json
+*.pem
+*.key
+
+# --------------------
+# Outros arquivos locais opcionais
+# --------------------
+*.log
