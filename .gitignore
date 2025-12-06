@@ -1,0 +1,72 @@
+# ---------------------------
+# Python
+# ---------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ---------------------------
+# Poetry
+# ---------------------------
+# lock file SHOULD be committed
+# poetry.lock
+
+# poetry cache (optional)
+.cache/pypoetry/
+.cache/poetry/
+
+# ---------------------------
+# dbt
+# ---------------------------
+target/
+dbt_packages/
+logs/
+log/
+dbt.log
+.user.yml
+
+# If you keep profiles locally (recommended)
+profiles.yml
+
+# ---------------------------
+# Secrets / credentials
+# ---------------------------
+*.env
+.env.*
+*.key
+*.pem
+credentials/
+secrets/
+**/service-account*.json
+**/*gcp*.json
+
+# ---------------------------
+# OS / Editor
+# ---------------------------
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
