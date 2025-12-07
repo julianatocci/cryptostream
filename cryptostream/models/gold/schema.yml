@@ -1,0 +1,209 @@
+version: 2
+
+models:
+  - name: trades_ohlcv_1m
+    description: >
+      Tabela gold de candles OHLCV de 1 minuto por símbolo, derivada da silver trades.
+      É a granularidade base para construção das demais tabelas (5m, 15m, 1h, 1d) e para
+      dashboards quase realtime.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'bucket_ts']
+    columns:
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
+        tests: [not_null]
+
+      - name: bucket_ts
+        description: >
+          Timestamp do início do candle de 1 minuto (truncado para minuto).
+          Base de particionamento e ordenação temporal.
+        tests: [not_null]
+
+      - name: open
+        description: "Primeiro preço negociado dentro do bucket."
+        tests: [not_null]
+
+      - name: high
+        description: "Maior preço negociado dentro do bucket."
+        tests: [not_null]
+
+      - name: low
+        description: "Menor preço negociado dentro do bucket."
+        tests: [not_null]
+
+      - name: close
+        description: "Último preço negociado dentro do bucket."
+        tests: [not_null]
+
+      - name: volume
+        description: "Volume total negociado no bucket (soma de qty)."
+        tests: [not_null]
+
+      - name: n_trades
+        description: "Número de trades que compõem o candle do bucket."
+        tests: [not_null]
+
+
+  - name: trades_ohlcv_5m
+    description: >
+      Tabela gold de candles OHLCV de 5 minutos por símbolo, derivada de trades_ohlcv_1m.
+      Otimizada para uso frequente em dashboards de trader.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'bucket_ts']
+    columns:
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
+        tests: [not_null]
+
+      - name: bucket_ts
+        description: "Timestamp do início do candle de 5 minutos."
+        tests: [not_null]
+
+      - name: open
+        description: "Preço de abertura do bucket de 5 minutos."
+        tests: [not_null]
+
+      - name: high
+        description: "Maior preço observado no bucket de 5 minutos."
+        tests: [not_null]
+
+      - name: low
+        description: "Menor preço observado no bucket de 5 minutos."
+        tests: [not_null]
+
+      - name: close
+        description: "Preço de fechamento do bucket de 5 minutos."
+        tests: [not_null]
+
+      - name: volume
+        description: "Volume total negociado no bucket de 5 minutos."
+        tests: [not_null]
+
+      - name: n_trades
+        description: "Número de trades agregados no bucket de 5 minutos."
+        tests: [not_null]
+
+
+  - name: trades_ohlcv_15m
+    description: >
+      Tabela gold de candles OHLCV de 15 minutos por símbolo, derivada de trades_ohlcv_1m.
+      Ideal para análises de curto prazo com ruído reduzido.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'bucket_ts']
+    columns:
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
+        tests: [not_null]
+
+      - name: bucket_ts
+        description: "Timestamp do início do candle de 15 minutos."
+        tests: [not_null]
+
+      - name: open
+        description: "Preço de abertura do bucket de 15 minutos."
+        tests: [not_null]
+
+      - name: high
+        description: "Maior preço observado no bucket de 15 minutos."
+        tests: [not_null]
+
+      - name: low
+        description: "Menor preço observado no bucket de 15 minutos."
+        tests: [not_null]
+
+      - name: close
+        description: "Preço de fechamento do bucket de 15 minutos."
+        tests: [not_null]
+
+      - name: volume
+        description: "Volume total negociado no bucket de 15 minutos."
+        tests: [not_null]
+
+      - name: n_trades
+        description: "Número de trades agregados no bucket de 15 minutos."
+        tests: [not_null]
+
+
+  - name: trades_ohlcv_1h
+    description: >
+      Tabela gold de candles OHLCV de 1 hora por símbolo, derivada de trades_ohlcv_1m.
+      Base para análises intradiárias e dashboards com janelas mais longas.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'bucket_ts']
+    columns:
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
+        tests: [not_null]
+
+      - name: bucket_ts
+        description: "Timestamp do início do candle de 1 hora."
+        tests: [not_null]
+
+      - name: open
+        description: "Preço de abertura do bucket de 1 hora."
+        tests: [not_null]
+
+      - name: high
+        description: "Maior preço observado no bucket de 1 hora."
+        tests: [not_null]
+
+      - name: low
+        description: "Menor preço observado no bucket de 1 hora."
+        tests: [not_null]
+
+      - name: close
+        description: "Preço de fechamento do bucket de 1 hora."
+        tests: [not_null]
+
+      - name: volume
+        description: "Volume total negociado no bucket de 1 hora."
+        tests: [not_null]
+
+      - name: n_trades
+        description: "Número de trades agregados no bucket de 1 hora."
+        tests: [not_null]
+
+
+  - name: trades_ohlcv_1d
+    description: >
+      Tabela gold de candles OHLCV diários por símbolo, derivada de trades_ohlcv_1m.
+      Recomendado para análises históricas e métricas de performance de longo prazo.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'bucket_ts']
+    columns:
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
+        tests: [not_null]
+
+      - name: bucket_ts
+        description: "Timestamp do início do candle diário."
+        tests: [not_null]
+
+      - name: open
+        description: "Preço de abertura do dia."
+        tests: [not_null]
+
+      - name: high
+        description: "Maior preço observado no dia."
+        tests: [not_null]
+
+      - name: low
+        description: "Menor preço observado no dia."
+        tests: [not_null]
+
+      - name: close
+        description: "Preço de fechamento do dia."
+        tests: [not_null]
+
+      - name: volume
+        description: "Volume total negociado no dia."
+        tests: [not_null]
+
+      - name: n_trades
+        description: "Número total de trades agregados no dia."
+        tests: [not_null]

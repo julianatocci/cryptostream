@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: staging_trades
+    description: >
+      View de staging para trades: extrai e tipa campos do JSON bruto
+      vindo da tabela bronze ws_raw_trades.
+
+    columns:
+      - name: stream
+        description: "Nome do stream Binance (ex.: btcusdt@trade)"
+        tests:
+          - not_null
+
+      - name: ingest_ts
+        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)"
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: "Timestamp do evento (derivado de payload.T)"
+        tests:
+          - not_null
+
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT)"
+        tests:
+          - not_null
+
+      - name: trade_id
+        description: "ID único do trade por símbolo (payload.t)"
+        tests:
+          - not_null
+
+      - name: price
+        description: "Preço do trade (payload.p) convertido para NUMERIC"
+        tests:
+          - not_null
+
+      - name: qty
+        description: "Quantidade negociada (payload.q) convertido para NUMERIC"
+        tests:
+          - not_null
+
+      - name: is_buyer_maker
+        description: "Indicador se o buyer é market maker (payload.m)"
+
+      - name: trade_ts
+        description: "Timestamp exato do trade (payload.T convertido para TIMESTAMP)"
+        tests:
+          - not_null
+
+      - name: event_time_ws
+        description: "Event time do websocket (payload.E convertido para TIMESTAMP)"

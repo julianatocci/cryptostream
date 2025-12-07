@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: wagon-bootcamp-466414   # ID do projeto GCP
+    schema: cryptostream_bronze       # dataset
+    tables:
+      - name: ws_raw_trades
+        description: "Dados brutos (bronze) do stream de trades da Binance, em envelope."
+        columns:
+          - name: stream
+            description: "Identificador do stream, ex: btcusdt@trade"
+            tests:
+              - not_null
+
+          - name: ingest_ts
+            description: "Timestamp de ingestão no pipeline"
+            tests:
+              - not_null
+
+          - name: payload
+            description: "JSON bruto do payload de trade vindo do websocket"
+
+          - name: event_ts
+            description: "Timestamp do evento (derivado do payload.T)"
+            

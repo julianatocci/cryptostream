@@ -1,0 +1,58 @@
+# --------------------
+# dbt (artefatos gerados)
+# --------------------
+target/
+logs/
+dbt_modules/          # legado (alguns projetos antigos usam)
+dbt_packages/         # baixado via `dbt deps`
+
+# --------------------
+# Python / Poetry
+# --------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.poetry/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --------------------
+# Jupyter / notebooks
+# --------------------
+.ipynb_checkpoints/
+
+# --------------------
+# OS / editores
+# --------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --------------------
+# Secrets / credenciais / configs locais
+# --------------------
+.env
+.env.*
+*.env
+profiles.yml          # NÃO versionar se tiver credenciais
+**/*service-account*.json
+**/*gcp-key*.json
+**/*credentials*.json
+*.pem
+*.key
+
+# --------------------
+# Outros arquivos locais opcionais
+# --------------------
+*.log
