@@ -31,7 +31,7 @@ async def binance_ws(stream, topic):
         try:
             async with websockets.connect(url) as ws:
                 print(f"[{datetime.now()}] Conectado no stream {stream}")
-                retry_seconds = 1  # reset retry time
+                retry_seconds = 1
                 async for msg in ws:
                     data = json.loads(msg)
                     await send_to_pubsub(topic, data)
@@ -41,7 +41,6 @@ async def binance_ws(stream, topic):
             print(f"[{datetime.now()}] Erro no stream {stream}: {e}. Reconectando em {retry_seconds}s...")
 
         await asyncio.sleep(retry_seconds)
-        # aumenta exponencialmente o tempo de reconexão até 1 minuto
         retry_seconds = min(retry_seconds * 2, 60)
 
 async def main_loop():
