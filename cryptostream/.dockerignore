@@ -1,0 +1,62 @@
+# --------------------
+# Git / controle de versão
+# --------------------
+.git
+.gitignore
+
+# --------------------
+# Ambientes Python / caches
+# --------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.poetry/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --------------------
+# Artefatos do dbt (gerados)
+# --------------------
+target/
+logs/
+dbt.log
+
+# Se vocês passarem a rodar `dbt deps` dentro do Dockerfile,
+# podem ignorar também o dbt_packages local:
+# dbt_packages/
+
+# --------------------
+# Segredos / configs locais
+# (não queremos que entrem na imagem)
+# --------------------
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.crt
+*gcp_keys*
+*service-account*.json
+*credentials*.json
+
+# --------------------
+# Arquivos de SO / editor
+# --------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --------------------
+# Outros arquivos temporários
+# --------------------
+*.log
