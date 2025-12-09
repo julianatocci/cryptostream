@@ -9,7 +9,7 @@ TABLE   = "ws_raw_trades"
 
 # --- CONFIG DO MOCK ---
 N_ROWS = 6000  # total de linhas no bronze
-START  = datetime(2025, 12, 3, 12, 0, 0, tzinfo=timezone.utc)
+START  = datetime(2025, 12, 8, 12, 0, 0, tzinfo=timezone.utc)
 
 SYMBOLS = [
     {"symbol": "BTCUSDT", "base_price": 42000.0, "vol": 35.0},
