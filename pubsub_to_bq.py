@@ -11,69 +11,96 @@ PROJECT_ID = "wagon-bootcamp-466414"
 DATASET_ID = "crypto_data_raw"
 
 SUBSCRIPTIONS = {
-    "trades-sub": "trades_raw",
-    "candles-sub": "candles_raw",
-    "orderbook-sub": "orderbook_raw",
-    "tickers-sub": "tickers_raw"
+    "trades-sub": ("raw_trades", "trade"),
+    "candles-sub": ("raw_candles", "candles"),
+    "orderbook-sub": ("raw_orderbook", "orderbook"),
+    "tickers-sub": ("raw_tickers", "tickers")
 }
 
 subscriber = pubsub_v1.SubscriberClient()
 bq_client = bigquery.Client()
 
-def create_table_if_not_exists(table_name):
-    dataset_ref = bq_client.dataset(DATASET_ID)
 
+def parse_event_ts(payload, type_):
+    """Extrai o timestamp do evento dependendo do tipo da mensagem."""
     try:
-        bq_client.get_dataset(dataset_ref)
-    except Exception:
-        print(f"[BQ] Dataset '{DATASET_ID}' não existe. Criando...")
-        bq_client.create_dataset(bigquery.Dataset(dataset_ref))
-        print(f"[BQ] Dataset '{DATASET_ID}' criado.")
+        if type_ == "trade":
+            return datetime.fromtimestamp(payload["T"] / 1000, tz=timezone.utc).isoformat()
+        elif type_ == "orderbook":
+            return datetime.fromtimestamp(payload["E"] / 1000, tz=timezone.utc).isoformat()
+        elif type_ == "candles":
+            return datetime.fromtimestamp(payload["k"]["T"] / 1000, tz=timezone.utc).isoformat()
+        elif type_ == "tickers":
+            return datetime.fromtimestamp(payload["E"] / 1000, tz=timezone.utc).isoformat()
+    except:
+        pass
+    return datetime.now(timezone.utc).isoformat()
 
-    table_ref = dataset_ref.table(table_name)
 
+def insert_raw_bq(message, table_name, type_):
+    """Função genérica para inserir mensagens no BigQuery."""
     try:
-        bq_client.get_table(table_ref)
-        print(f"[BQ] Tabela '{table_name}' já existe.")
-    except Exception:
-        print(f"[BQ] Tabela '{table_name}' não existe. Criando...")
-        schema = [
-            bigquery.SchemaField("received_at", "TIMESTAMP"),
-            bigquery.SchemaField("data", "STRING")
-        ]
-        table = bigquery.Table(table_ref, schema=schema)
-        bq_client.create_table(table)
-        print(f"[BQ] Tabela '{table_name}' criada.")
+        payload = json.loads(message.data.decode("utf-8"))
 
-def callback_factory(table_name):
-    def callback(message):
-        try:
-            data = json.loads(message.data.decode("utf-8"))
+        if type_ == "trade":
+            symbol = payload.get("s", "").lower()
+            event_type = payload.get("e", "")
+            stream_value = f"{symbol}@{event_type}"
 
-            data_row = {
-                "received_at": datetime.now(timezone.utc).isoformat(),
-                "data": json.dumps(data)
+            row = {
+                "stream": stream_value,
+                "event_ts": parse_event_ts(payload, type_),
+                "ingest_ts": datetime.now(timezone.utc).isoformat(),
+                "payload": json.dumps(payload)
             }
 
-            table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
-            errors = bq_client.insert_rows_json(table_id, [data_row])
-            if errors:
-                print(f"[{table_name}] Erro ao inserir no BQ: {errors}")
-            else:
-                message.ack()
-                print(f"[{table_name}] Mensagem inserida no BQ")
-        except Exception as e:
-            print(f"[{table_name}] Erro ao processar mensagem: {e}")
+        elif type_ == "orderbook":
+            symbol = payload.get("s", "").lower()
+            stream_value = f"{symbol}@{payload.get('e','')}"
+            row = {
+                "stream": stream_value,
+                "event_ts": parse_event_ts(payload, type_),
+                "ingest_ts": datetime.now(timezone.utc).isoformat(),
+                "payload": json.dumps(payload)
+            }
+
+        elif type_ in ["candles", "tickers"]:
+            row = {
+                "s": payload.get("s", "").lower(),
+                "event_ts": parse_event_ts(payload, type_),
+                "ingest_ts": datetime.now(timezone.utc).isoformat(),
+                "payload": json.dumps(payload)
+            }
+
+        table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
+        errors = bq_client.insert_rows_json(table_id, [row])
+
+        if errors:
+            print(f"[{table_name}] Erro ao inserir no BQ:", errors)
+        else:
+            message.ack()
+            print(f"[{table_name}] Inserido com sucesso!")
+
+    except Exception as e:
+        print(f"[{table_name}] Erro ao processar mensagem:", e)
+
+
+def create_callback(table_name, type_):
+    """Cria função de callback para cada subscription."""
+    def callback(message):
+        insert_raw_bq(message, table_name, type_)
     return callback
 
-for sub_name, table_name in SUBSCRIPTIONS.items():
-    create_table_if_not_exists(table_name)
+
+for sub_name, (table_name, type_) in SUBSCRIPTIONS.items():
     subscription_path = subscriber.subscription_path(PROJECT_ID, sub_name)
-    subscriber.subscribe(subscription_path, callback=callback_factory(table_name))
-    print(f"[{sub_name}] Listening...")
+    subscriber.subscribe(subscription_path, callback=create_callback(table_name, type_))
+    print(f"[{sub_name}] Listening… tabela: {table_name}, tipo: {type_}")
+
+print("\n[pubsub_to_bq] Monitoramento iniciado.\n")
 
 try:
     while True:
         time.sleep(60)
 except KeyboardInterrupt:
-    print(f"[{datetime.now()}] Script encerrado pelo usuário")
+    print("Encerrado pelo usuário.")
