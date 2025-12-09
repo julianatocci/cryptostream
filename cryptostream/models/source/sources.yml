@@ -3,9 +3,9 @@ version: 2
 sources:
   - name: bronze
     database: wagon-bootcamp-466414   # ID do projeto GCP
-    schema: cryptostream_bronze       # dataset
+    schema: crypto_data_raw      # dataset
     tables:
-      - name: ws_raw_trades
+      - name: raw_trades
         description: "Dados brutos (bronze) do stream de trades da Binance, em envelope."
         columns:
           - name: stream
@@ -23,4 +23,3 @@ sources:
 
           - name: event_ts
             description: "Timestamp do evento (derivado do payload.T)"
-            

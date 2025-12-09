@@ -14,4 +14,4 @@ select
   timestamp_millis(cast(json_value(payload, "$.T") as int64)) as trade_ts,
   timestamp_millis(cast(json_value(payload, "$.E") as int64)) as event_time_ws
 
-from {{ source('bronze','ws_raw_trades') }}
+from {{ source('bronze','raw_trades') }}

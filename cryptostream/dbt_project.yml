@@ -33,13 +33,13 @@ models:
   cryptostream:
     # Config indicated by + and applies to all files under models/example/
     staging:
-      +schema: cryptostream_silver
+      +schema: crypto_data_silver
       +materialized: view
 
     silver:
-      +schema: cryptostream_silver
+      +schema: crypto_data_silver
       +materialized: incremental
 
     gold:
-      +schema: cryptostream_gold
+      +schema: crypto_data_gold
       +materialized: table
