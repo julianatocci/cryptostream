@@ -3,23 +3,112 @@ version: 2
 sources:
   - name: bronze
     database: wagon-bootcamp-466414   # ID do projeto GCP
-    schema: crypto_data_raw      # dataset
+    schema: crypto_data_raw           # dataset com os envelopes vindos do Pub/Sub
     tables:
       - name: raw_trades
-        description: "Dados brutos (bronze) do stream de trades da Binance, em envelope."
+        description: >
+          Envelope bruto dos streams de trade da Binance Spot para todos os símbolos,
+          ex: <symbol>@trade. Contém o JSON do evento original e metadados de ingestão.
         columns:
           - name: stream
-            description: "Identificador do stream, ex: btcusdt@trade"
+            description: >
+              Identificador completo do stream WebSocket da Binance,
+              ex: btcusdt@trade, ethusdt@trade.
             tests:
               - not_null
 
           - name: ingest_ts
-            description: "Timestamp de ingestão no pipeline"
+            description: "Timestamp de ingestão no pipeline (lado GCP/PubSub)."
             tests:
               - not_null
 
           - name: payload
-            description: "JSON bruto do payload de trade vindo do websocket"
+            description: >
+              JSON bruto do payload de trade vindo do WebSocket da Binance,
+              conforme documentação do stream <symbol>@trade.
 
           - name: event_ts
-            description: "Timestamp do evento (derivado do payload.T)"
+            description: >
+              Timestamp do evento usado pelo pipeline (normalmente derivado de campos
+              de tempo do payload, como E ou T).
+
+      - name: raw_candles
+        description: >
+          Envelope bruto dos streams de Kline/Candlestick da Binance Spot para todos
+          os símbolos, ex: <symbol>@kline_1m.
+        columns:
+          - name: s ##errado aqui, esperando a Ju corrigir
+            description: >
+              Identificador completo do stream WebSocket da Binance,
+              ex: btcusdt@kline_1m, ethusdt@kline_1h.
+            tests:
+              - not_null
+
+          - name: ingest_ts
+            description: "Timestamp de ingestão no pipeline (lado GCP/PubSub)."
+            tests:
+              - not_null
+
+          - name: payload
+            description: >
+              JSON bruto do payload de kline (objeto 'k') vindo do WebSocket,
+              conforme documentação do stream <symbol>@kline_<interval>.
+
+          - name: event_ts
+            description: >
+              Timestamp do evento de kline utilizado pelo pipeline (normalmente
+              derivado do campo E - event time - ou do início da janela t).
+
+      - name: raw_orderbook
+        description: >
+          Envelope bruto dos streams de Diff. Depth da Binance Spot para todos
+          os símbolos, ex: <symbol>@depth.
+        columns:
+          - name: stream
+            description: >
+              Identificador completo do stream WebSocket da Binance,
+              ex: btcusdt@depth, ethusdt@depth@100ms.
+            tests:
+              - not_null
+
+          - name: ingest_ts
+            description: "Timestamp de ingestão no pipeline (lado GCP/PubSub)."
+            tests:
+              - not_null
+
+          - name: payload
+            description: >
+              JSON bruto do payload de atualização de order book (depthUpdate),
+              conforme documentação do stream <symbol>@depth.
+
+          - name: event_ts
+            description: >
+              Timestamp do evento de atualização de book utilizado pelo pipeline
+              (normalmente derivado do campo E - event time).
+
+      - name: raw_tickers
+        description: >
+          Envelope bruto dos streams de 24h ticker da Binance Spot para todos
+          os símbolos, ex: <symbol>@ticker.
+        columns:
+          - name: s ##errado aqui, esperando a Ju corrigir
+            description: >
+              Identificador completo do stream WebSocket da Binance,
+              ex: btcusdt@ticker, ethusdt@ticker.
+            tests:
+              - not_null
+
+          - name: ingest_ts
+            description: "Timestamp de ingestão no pipeline (lado GCP/PubSub)."
+            tests:
+              - not_null
+
+          - name: payload
+            description: >
+              JSON bruto do payload de 24h rolling ticker (evento 24hrTicker),
+              conforme documentação do stream <symbol>@ticker.
+
+          - name: event_ts
+            description: >
+              Timestamp do evento de ticker utilizado pelo pipeline
+              (normalmente derivado do campo E - event time).
