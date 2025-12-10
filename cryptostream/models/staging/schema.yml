@@ -4,51 +4,343 @@ models:
   - name: staging_trades
     description: >
       View de staging para trades: extrai e tipa campos do JSON bruto
-      vindo da tabela bronze ws_raw_trades.
+      vindo da tabela bronze raw_trades. Mantém todos os campos do payload
+      do stream <symbol>@trade, além de metadados do envelope.
 
     columns:
       - name: stream
-        description: "Nome do stream Binance (ex.: btcusdt@trade)"
+        description: "Nome do stream Binance (ex.: btcusdt@trade), normalizado em lowercase."
         tests:
           - not_null
 
       - name: ingest_ts
-        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)"
+        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)."
         tests:
           - not_null
 
       - name: event_ts
-        description: "Timestamp do evento (derivado de payload.T)"
+        description: >
+          Timestamp de referência do evento (usado para particionamento na silver).
+          Em geral alinhado com o momento do trade.
+        tests:
+          - not_null
+
+      - name: event_type
+        description: >
+          Tipo do evento vindo do payload (campo e), esperado ser 'trade' para este stream.
+
+      - name: event_time_ws
+        description: >
+          Event time do websocket (payload.E convertido para TIMESTAMP).
+          Representa quando a Binance emitiu o evento.
         tests:
           - not_null
 
       - name: symbol
-        description: "Par de negociação (ex.: BTCUSDT)"
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase."
         tests:
           - not_null
 
       - name: trade_id
-        description: "ID único do trade por símbolo (payload.t)"
+        description: "ID único do trade por símbolo (payload.t)."
         tests:
           - not_null
 
       - name: price
-        description: "Preço do trade (payload.p) convertido para NUMERIC"
+        description: "Preço do trade (payload.p) convertido para NUMERIC."
         tests:
           - not_null
 
       - name: qty
-        description: "Quantidade negociada (payload.q) convertido para NUMERIC"
+        description: "Quantidade negociada (payload.q) convertida para NUMERIC."
+        tests:
+          - not_null
+
+      - name: trade_ts
+        description: "Timestamp exato do trade (payload.T convertido para TIMESTAMP)."
         tests:
           - not_null
 
       - name: is_buyer_maker
-        description: "Indicador se o buyer é market maker (payload.m)"
+        description: >
+          Indicador se o buyer é market maker (payload.m).
+          True se o comprador foi o market maker na operação.
 
-      - name: trade_ts
-        description: "Timestamp exato do trade (payload.T convertido para TIMESTAMP)"
+      - name: ignore_flag
+        description: >
+          Campo técnico da Binance (payload.M), normalmente ignorado na lógica de negócio
+          mas preservado por completude do payload.
+
+
+  - name: staging_candles
+    description: >
+      View de staging para candles (kline): extrai e tipa campos do JSON bruto
+      vindo da tabela bronze raw_candles para o stream <symbol>@kline_<interval>.
+      Inclui todas as informações do objeto k (janela de candle, OHLC, volumes e trades).
+
+    columns:
+      - name: stream
+        description: "Nome do stream Binance (ex.: btcusdt@kline_1m), normalizado em lowercase."
         tests:
           - not_null
 
+      - name: ingest_ts
+        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)."
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento no pipeline (usado depois para particionamento).
+        tests:
+          - not_null
+
+      - name: event_type
+        description: >
+          Tipo do evento vindo do payload (campo e), esperado ser 'kline' para este stream.
+
       - name: event_time_ws
-        description: "Event time do websocket (payload.E convertido para TIMESTAMP)"
+        description: >
+          Event time do websocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento de kline.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase (campo s)."
+        tests:
+          - not_null
+
+      - name: open_time
+        description: >
+          Início da janela da candle (campo k.t) convertido para TIMESTAMP.
+
+      - name: close_time
+        description: >
+          Fim da janela da candle (campo k.T) convertido para TIMESTAMP.
+
+      - name: kline_symbol
+        description: >
+          Símbolo do par dentro do objeto kline (campo k.s). Deve ser consistente com symbol.
+
+      - name: kline_interval
+        description: >
+          Intervalo da candle (campo k.i), ex.: 1m, 5m, 1h.
+
+      - name: first_trade_id
+        description: "ID do primeiro trade que compõe a candle (campo k.f)."
+
+      - name: last_trade_id
+        description: "ID do último trade que compõe a candle (campo k.L)."
+
+      - name: open_price
+        description: "Preço de abertura da candle (campo k.o) convertido para NUMERIC."
+        tests:
+          - not_null
+
+      - name: close_price
+        description: "Preço de fechamento da candle (campo k.c) convertido para NUMERIC."
+        tests:
+          - not_null
+
+      - name: high_price
+        description: "Preço máximo da candle (campo k.h) convertido para NUMERIC."
+        tests:
+          - not_null
+
+      - name: low_price
+        description: "Preço mínimo da candle (campo k.l) convertido para NUMERIC."
+        tests:
+          - not_null
+
+      - name: base_volume
+        description: "Volume em ativo base na janela da candle (campo k.v)."
+
+      - name: quote_volume
+        description: "Volume em ativo de cotação na janela da candle (campo k.q)."
+
+      - name: trade_count
+        description: "Número total de trades na janela da candle (campo k.n)."
+
+      - name: is_closed
+        description: >
+          Flag indicando se a candle foi fechada (campo k.x). Apenas candles fechadas
+          são definitivas.
+
+      - name: taker_buy_base_volume
+        description: "Volume em ativo base correspondente a ordens taker buy (campo k.V)."
+
+      - name: taker_buy_quote_volume
+        description: "Volume em ativo de cotação correspondente a ordens taker buy (campo k.Q)."
+
+      - name: ignore_kline
+        description: >
+          Campo técnico da Binance (campo k.B), normalmente ignorado na lógica de negócio
+          mas preservado por completude do payload.
+
+
+  - name: staging_orderbook
+    description: >
+      View de staging para atualizações de order book (depthUpdate): extrai e tipa campos
+      do JSON bruto vindo da tabela bronze raw_orderbook para o stream <symbol>@depth.
+      Mantém as listas de bids e asks em formato JSON para posterior explodimento na silver/gold.
+
+    columns:
+      - name: stream
+        description: "Nome do stream Binance (ex.: btcusdt@depth), normalizado em lowercase."
+        tests:
+          - not_null
+
+      - name: ingest_ts
+        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)."
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento no pipeline (usado depois para particionamento).
+        tests:
+          - not_null
+
+      - name: event_type
+        description: >
+          Tipo do evento vindo do payload (campo e), esperado ser 'depthUpdate'.
+
+      - name: event_time_ws
+        description: >
+          Event time do websocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento de atualização de book.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase (campo s)."
+        tests:
+          - not_null
+
+      - name: first_update_id
+        description: >
+          Primeiro updateId coberto por este evento (campo U). Usado para reconstrução
+          e consistência do order book ao longo do tempo.
+        tests:
+          - not_null
+
+      - name: last_update_id
+        description: >
+          Último updateId coberto por este evento (campo u). Usado como referência
+          para ordenação e deduplicação das atualizações.
+        tests:
+          - not_null
+
+      - name: bids
+        description: >
+          Lista JSON de níveis de bid a serem atualizados no book (campo b).
+          Cada elemento representa [price, qty] após o update.
+
+      - name: asks
+        description: >
+          Lista JSON de níveis de ask a serem atualizados no book (campo a).
+          Cada elemento representa [price, qty] após o update.
+
+
+  - name: staging_tickers
+    description: >
+      View de staging para 24h rolling ticker: extrai e tipa campos do JSON bruto
+      vindo da tabela bronze raw_tickers para o stream <symbol>@ticker.
+      Representa o estado agregado de preço e volume em uma janela móvel de 24h.
+
+    columns:
+      - name: stream
+        description: >
+          Nome do stream Binance (ex.: btcusdt@ticker), normalizado em lowercase.
+          Pode depender de ajuste no modelo SQL para usar a coluna correta da raw.
+
+      - name: ingest_ts
+        description: "Timestamp de ingestão no pipeline (quando gravamos no bronze)."
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento no pipeline (usado depois para particionamento).
+        tests:
+          - not_null
+
+      - name: event_type
+        description: >
+          Tipo do evento vindo do payload (campo e), esperado ser '24hrTicker' para este stream.
+
+      - name: event_time_ws
+        description: >
+          Event time do websocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento 24hrTicker.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: "Par de negociação (ex.: BTCUSDT), normalizado em uppercase (campo s)."
+        tests:
+          - not_null
+
+      - name: price_change
+        description: "Variação absoluta de preço nas últimas 24h (campo p)."
+
+      - name: price_change_percent
+        description: "Variação percentual de preço nas últimas 24h (campo P)."
+
+      - name: weighted_avg_price
+        description: "Preço médio ponderado pelo volume nas últimas 24h (campo w)."
+
+      - name: first_trade_before_24h_price
+        description: >
+          Preço do primeiro trade imediatamente antes da janela rolling de 24h (campo x).
+
+      - name: last_price
+        description: "Último preço negociado reportado pelo ticker (campo c)."
+        tests:
+          - not_null
+
+      - name: last_qty
+        description: "Quantidade do último trade reportado pelo ticker (campo Q)."
+
+      - name: best_bid_price
+        description: "Melhor preço de bid (compra) disponível no momento do ticker (campo b)."
+
+      - name: best_bid_qty
+        description: "Quantidade disponível no melhor bid (campo B)."
+
+      - name: best_ask_price
+        description: "Melhor preço de ask (venda) disponível no momento do ticker (campo a)."
+
+      - name: best_ask_qty
+        description: "Quantidade disponível no melhor ask (campo A)."
+
+      - name: open_price_24h
+        description: "Preço de abertura da janela rolling de 24h (campo o)."
+
+      - name: high_price_24h
+        description: "Maior preço negociado na janela rolling de 24h (campo h)."
+
+      - name: low_price_24h
+        description: "Menor preço negociado na janela rolling de 24h (campo l)."
+
+      - name: base_volume_24h
+        description: "Volume total negociado em ativo base nas últimas 24h (campo v)."
+
+      - name: quote_volume_24h
+        description: "Volume total negociado em ativo de cotação nas últimas 24h (campo q)."
+
+      - name: stats_open_time
+        description: "Início da janela estatística de 24h (campo O) convertido para TIMESTAMP."
+
+      - name: stats_close_time
+        description: "Fim da janela estatística de 24h (campo C) convertido para TIMESTAMP."
+
+      - name: first_trade_id_24h
+        description: "ID do primeiro trade dentro da janela rolling de 24h (campo F)."
+
+      - name: last_trade_id_24h
+        description: "ID do último trade dentro da janela rolling de 24h (campo L)."
+
+      - name: trade_count_24h
+        description: "Número total de trades na janela rolling de 24h (campo n)."

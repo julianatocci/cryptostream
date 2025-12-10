@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: trades
+  - name: silver_trades
     description: >
       Camada silver de trades da Binance Spot. Dados já tipados e normalizados a partir
       do staging, com deduplicação técnica (reentrega/replay do pipeline) e filtros mínimos
@@ -98,5 +98,421 @@ models:
       - name: hour_bucket
         description: >
           event_ts truncado para hora. Base para agregações horárias em gold.
+        tests:
+          - not_null
+
+
+  - name: silver_candles
+    description: >
+      Camada silver de candles (kline) da Binance Spot. Cada linha representa uma candle
+      para um símbolo e intervalo específico (ex.: 1m), já tipada e normalizada a partir
+      do staging. Inclui volumes base/quote, contagem de trades e flags de fechamento de candle.
+      É a base para métricas de preço agregadas na camada gold.
+
+    tests:
+      # uma candle é única por símbolo + intervalo + horário de abertura
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'kline_interval', 'open_time']
+
+    columns:
+      - name: stream
+        description: >
+          Identificador do stream de origem no WebSocket (ex.: btcusdt@kline_1m).
+          Útil para auditoria e rastreio da fonte.
+        tests:
+          - not_null
+
+      - name: ingest_ts
+        description: >
+          Timestamp de ingestão do pipeline (quando a mensagem foi persistida no bronze).
+          Usado para auditoria de atraso e desempate na deduplicação.
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento usado para particionamento.
+          Em geral alinhado com o event time do WebSocket.
+        tests:
+          - not_null
+
+      - name: event_time_ws
+        description: >
+          Event time do WebSocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento de kline.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: >
+          Par de negociação normalizado em uppercase (ex.: BTCUSDT, ETHUSDT).
+        tests:
+          - not_null
+
+      - name: kline_interval
+        description: >
+          Intervalo da candle (campo k.i), ex.: 1m, 5m, 1h.
+        tests:
+          - not_null
+
+      - name: open_time
+        description: >
+          Início da janela da candle (campo k.t) convertido para TIMESTAMP.
+        tests:
+          - not_null
+
+      - name: close_time
+        description: >
+          Fim da janela da candle (campo k.T) convertido para TIMESTAMP.
+        tests:
+          - not_null
+
+      - name: open_price
+        description: >
+          Preço de abertura da candle (k.o) convertido para NUMERIC.
+        tests:
+          - not_null
+
+      - name: high_price
+        description: >
+          Preço máximo da candle (k.h) convertido para NUMERIC.
+        tests:
+          - not_null
+
+      - name: low_price
+        description: >
+          Preço mínimo da candle (k.l) convertido para NUMERIC.
+        tests:
+          - not_null
+
+      - name: close_price
+        description: >
+          Preço de fechamento da candle (k.c) convertido para NUMERIC.
+        tests:
+          - not_null
+
+      - name: base_volume
+        description: >
+          Volume negociado em termos do ativo base durante a candle (k.v).
+        tests:
+          - not_null
+
+      - name: quote_volume
+        description: >
+          Volume negociado em termos do ativo de cotação durante a candle (k.q).
+        tests:
+          - not_null
+
+      - name: trade_count
+        description: >
+          Quantidade de trades na janela da candle (k.n).
+        tests:
+          - not_null
+
+      - name: first_trade_id
+        description: >
+          ID do primeiro trade que compõe a candle (k.f).
+        tests:
+          - not_null
+
+      - name: last_trade_id
+        description: >
+          ID do último trade que compõe a candle (k.L).
+        tests:
+          - not_null
+
+      - name: is_closed
+        description: >
+          Flag booleana indicando se a candle foi fechada (k.x).
+          Apenas candles fechadas são definitivas.
+        tests:
+          - not_null
+
+      - name: taker_buy_base_volume
+        description: >
+          Volume em ativo base correspondente a ordens de taker buy (k.V).
+        tests: []
+
+      - name: taker_buy_quote_volume
+        description: >
+          Volume em ativo de cotação correspondente a ordens de taker buy (k.Q).
+        tests: []
+
+      - name: ignore_kline
+        description: >
+          Campo técnico da Binance (k.B), mantido para completude e possíveis usos futuros.
+        tests: []
+
+      - name: event_date
+        description: >
+          Data do evento derivada de event_ts. Facilita filtros diários e particionamento lógico.
+        tests:
+          - not_null
+
+      - name: minute_bucket
+        description: >
+          event_ts truncado para minuto. Facilita agregações por minuto na camada gold.
+        tests:
+          - not_null
+
+      - name: hour_bucket
+        description: >
+          event_ts truncado para hora. Facilita agregações horárias na camada gold.
+        tests:
+          - not_null
+
+
+  - name: silver_orderbook
+    description: >
+      Camada silver de atualizações de order book (depthUpdate) da Binance Spot.
+      Cada linha representa um evento de atualização de profundidade para um símbolo,
+      já deduplicado tecnicamente. As colunas bids e asks mantêm os níveis de preço
+      em formato JSON para posterior explodimento e cálculo de métricas de liquidez
+      na camada gold.
+
+    tests:
+      # último update_id por símbolo deve ser único
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'last_update_id']
+
+    columns:
+      - name: stream
+        description: >
+          Identificador do stream de origem no WebSocket (ex.: btcusdt@depth).
+          Útil para auditoria e rastreio da fonte.
+        tests:
+          - not_null
+
+      - name: ingest_ts
+        description: >
+          Timestamp de ingestão do pipeline (quando a mensagem foi persistida no bronze).
+          Usado para auditoria de atraso e desempate na deduplicação.
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento usado para particionamento.
+          Em geral alinhado com o event time do WebSocket.
+        tests:
+          - not_null
+
+      - name: event_time_ws
+        description: >
+          Event time do WebSocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento de depthUpdate.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: >
+          Par de negociação normalizado em uppercase (ex.: BTCUSDT, ETHUSDT).
+        tests:
+          - not_null
+
+      - name: first_update_id
+        description: >
+          Primeiro updateId coberto por este evento (U). Usado para reconstrução
+          e consistência do order book.
+        tests:
+          - not_null
+
+      - name: last_update_id
+        description: >
+          Último updateId coberto por este evento (u). Chave natural para ordenação
+          e deduplicação das atualizações de book.
+        tests:
+          - not_null
+
+      - name: bids
+        description: >
+          Lista JSON de níveis de bid a serem atualizados no book.
+          Cada elemento representa [price, qty] após o update.
+          Pode ser explodida em modelos gold para análises por nível de preço.
+        tests: []
+
+      - name: asks
+        description: >
+          Lista JSON de níveis de ask a serem atualizados no book.
+          Cada elemento representa [price, qty] após o update.
+          Pode ser explodida em modelos gold para análises por nível de preço.
+        tests: []
+
+      - name: event_date
+        description: >
+          Data do evento derivada de event_ts. Facilita filtros diários e particionamento lógico.
+        tests:
+          - not_null
+
+      - name: minute_bucket
+        description: >
+          event_ts truncado para minuto. Útil para amostrar/sumarizar a evolução do book por minuto.
+        tests:
+          - not_null
+
+      - name: hour_bucket
+        description: >
+          event_ts truncado para hora. Útil para agregações horárias de liquidez e spread.
+        tests:
+          - not_null
+
+
+  - name: silver_tickers
+    description: >
+      Camada silver de 24h rolling ticker da Binance Spot. Cada linha representa o estado
+      agregado de preço e volume de um símbolo em um determinado instante de evento.
+      Inclui variação percentual, best bid/ask, OHLC 24h e volumes base/quote. Preparado
+      para servir como base de visões de overview de mercado na camada gold.
+
+    tests:
+      # um ticker por símbolo e event_time_ws deve ser único
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['symbol', 'event_time_ws']
+
+    columns:
+      - name: ingest_ts
+        description: >
+          Timestamp de ingestão do pipeline (quando a mensagem foi persistida no bronze).
+          Usado para auditoria de atraso e desempate na deduplicação.
+        tests:
+          - not_null
+
+      - name: event_ts
+        description: >
+          Timestamp de referência do evento usado para particionamento.
+          Alinhado ao tempo do ticker no pipeline.
+        tests:
+          - not_null
+
+      - name: event_time_ws
+        description: >
+          Event time do WebSocket (campo E) convertido para TIMESTAMP.
+          Representa quando a Binance emitiu o evento 24hrTicker.
+        tests:
+          - not_null
+
+      - name: symbol
+        description: >
+          Par de negociação normalizado em uppercase (ex.: BTCUSDT, ETHUSDT).
+        tests:
+          - not_null
+
+      - name: price_change
+        description: >
+          Variação absoluta de preço nas últimas 24h (campo p).
+        tests: []
+
+      - name: price_change_percent
+        description: >
+          Variação percentual de preço nas últimas 24h (campo P).
+        tests: []
+
+      - name: weighted_avg_price
+        description: >
+          Preço médio ponderado pelo volume nas últimas 24h (campo w).
+        tests: []
+
+      - name: first_trade_before_24h_price
+        description: >
+          Preço do primeiro trade imediatamente antes da janela rolling de 24h (campo x).
+        tests: []
+
+      - name: last_price
+        description: >
+          Último preço negociado reportado pelo ticker (campo c).
+        tests:
+          - not_null
+
+      - name: last_qty
+        description: >
+          Quantidade do último trade reportado pelo ticker (campo Q).
+        tests: []
+
+      - name: best_bid_price
+        description: >
+          Melhor preço de bid (compra) disponível no momento do ticker (campo b).
+        tests: []
+
+      - name: best_bid_qty
+        description: >
+          Quantidade disponível no melhor bid (campo B).
+        tests: []
+
+      - name: best_ask_price
+        description: >
+          Melhor preço de ask (venda) disponível no momento do ticker (campo a).
+        tests: []
+
+      - name: best_ask_qty
+        description: >
+          Quantidade disponível no melhor ask (campo A).
+        tests: []
+
+      - name: open_price_24h
+        description: >
+          Preço de abertura da janela rolling de 24h (campo o).
+        tests: []
+
+      - name: high_price_24h
+        description: >
+          Maior preço negociado na janela rolling de 24h (campo h).
+        tests: []
+
+      - name: low_price_24h
+        description: >
+          Menor preço negociado na janela rolling de 24h (campo l).
+        tests: []
+
+      - name: base_volume_24h
+        description: >
+          Volume total negociado em ativo base nas últimas 24h (campo v).
+        tests: []
+
+      - name: quote_volume_24h
+        description: >
+          Volume total negociado em ativo de cotação nas últimas 24h (campo q).
+        tests: []
+
+      - name: stats_open_time
+        description: >
+          Início da janela estatística de 24h (campo O) convertido para TIMESTAMP.
+        tests: []
+
+      - name: stats_close_time
+        description: >
+          Fim da janela estatística de 24h (campo C) convertido para TIMESTAMP.
+        tests: []
+
+      - name: first_trade_id_24h
+        description: >
+          ID do primeiro trade dentro da janela rolling de 24h (campo F).
+        tests: []
+
+      - name: last_trade_id_24h
+        description: >
+          ID do último trade dentro da janela rolling de 24h (campo L).
+        tests: []
+
+      - name: trade_count_24h
+        description: >
+          Número total de trades na janela rolling de 24h (campo n).
+        tests: []
+
+      - name: event_date
+        description: >
+          Data do evento derivada de event_ts. Facilita filtros diários e particionamento lógico.
+        tests:
+          - not_null
+
+      - name: minute_bucket
+        description: >
+          event_ts truncado para minuto. Facilita join e agregações com outras tabelas
+          silver/gold no mesmo bucket temporal.
+        tests:
+          - not_null
+
+      - name: hour_bucket
+        description: >
+          event_ts truncado para hora. Facilita análises horárias de preço, volume e spread.
         tests:
           - not_null

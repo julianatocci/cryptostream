@@ -8,12 +8,12 @@
 
 with base as (
   select *
-  from {{ ref('trades_ohlcv_1m') }}
+  from {{ ref('gold_candles_closed_1m') }}
 
   {% if is_incremental() %}
     where bucket_ts >= timestamp_sub(
       (select max(bucket_ts) from {{ this }}),
-      interval 2 day
+      interval 30 day
     )
   {% endif %}
 ),
@@ -21,10 +21,16 @@ with base as (
 bucketed as (
   select
     symbol,
-    timestamp_trunc(bucket_ts, hour) as bucket_ts,
+    -- janelas de 1 dia
+    timestamp_trunc(bucket_ts, day) as bucket_ts,
     bucket_ts as minute_ts_in_bucket,
-    open, high, low, close,
-    volume, n_trades
+    open,
+    high,
+    low,
+    close,
+    volume,
+    quote_volume,
+    n_trades
   from base
 ),
 
@@ -38,8 +44,9 @@ agg as (
     min(low)  as low,
     array_agg(close order by minute_ts_in_bucket desc limit 1)[offset(0)] as close,
 
-    sum(volume)   as volume,
-    sum(n_trades) as n_trades
+    sum(volume)       as volume,
+    sum(quote_volume) as quote_volume,
+    sum(n_trades)     as n_trades
   from bucketed
   group by 1,2
 )

@@ -12,7 +12,7 @@ with trades as (
     event_ts as ts,
     price,
     qty
-  from {{ ref('trades') }}
+  from {{ ref('silver_trades') }}
 
   {% if is_incremental() %}
     -- reprocessa uma janelinha pra pegar trades atrasados
