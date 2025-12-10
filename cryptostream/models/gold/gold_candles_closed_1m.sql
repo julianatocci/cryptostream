@@ -29,7 +29,7 @@ with base as (
   {% if is_incremental() %}
     and event_ts >= timestamp_sub(
       (select max(bucket_ts) from {{ this }}),
-      interval 20 minute
+      interval 30 minute
     )
   {% endif %}
 ),
