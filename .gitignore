@@ -1,3 +1,6 @@
+# --------------------
+# dbt (artefatos gerados)
+# --------------------
 *.json
 
 venv/
@@ -18,6 +21,7 @@ dbt_packages/         # baixado via `dbt deps`
 # Python / Poetry
 # --------------------
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 *.pyo
@@ -49,6 +53,7 @@ Thumbs.db
 # --------------------
 # Secrets / credenciais / configs locais
 # --------------------
+.env
 .env.*
 *.env
 profiles.yml          # NÃO versionar se tiver credenciais
@@ -57,3 +62,8 @@ profiles.yml          # NÃO versionar se tiver credenciais
 **/*credentials*.json
 *.pem
 *.key
+
+# --------------------
+# Outros arquivos locais opcionais
+# --------------------
+*.log
