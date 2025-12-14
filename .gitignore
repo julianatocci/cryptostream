@@ -1,6 +1,17 @@
 # --------------------
 # dbt (artefatos gerados)
 # --------------------
+*.json
+
+venv/
+.env
+
+*.log
+log.txt
+
+__pycache__/
+*.pyc
+
 target/
 logs/
 dbt_modules/          # legado (alguns projetos antigos usam)
