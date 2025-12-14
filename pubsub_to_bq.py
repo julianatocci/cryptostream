@@ -43,31 +43,34 @@ def insert_raw_bq(message, table_name, type_):
         payload = json.loads(message.data.decode("utf-8"))
 
         if type_ == "trade":
-            symbol = payload.get("s", "").lower()
-            event_type = payload.get("e", "")
+            symbol = payload.get("data", {}).get("s", "").lower()
+            event_type = payload.get("data", {}).get("e", "")
             stream_value = f"{symbol}@{event_type}"
 
             row = {
                 "stream": stream_value,
-                "event_ts": parse_event_ts(payload, type_),
+                "event_ts": parse_event_ts(payload.get("data", {}), type_),
                 "ingest_ts": datetime.now(timezone.utc).isoformat(),
                 "payload": json.dumps(payload)
             }
 
         elif type_ == "orderbook":
-            symbol = payload.get("s", "").lower()
-            stream_value = f"{symbol}@{payload.get('e','')}"
+            symbol = payload.get("data", {}).get("s", "").lower()
+            stream_value = f"{symbol}@{payload.get('data', {}).get('e','')}"
             row = {
                 "stream": stream_value,
-                "event_ts": parse_event_ts(payload, type_),
+                "event_ts": parse_event_ts(payload.get("data", {}), type_),
                 "ingest_ts": datetime.now(timezone.utc).isoformat(),
                 "payload": json.dumps(payload)
             }
 
         elif type_ in ["candles", "tickers"]:
+            symbol = payload.get("data", {}).get("s", "").lower()
+            event_type = payload.get("data", {}).get("e", "")
+
             row = {
-                "s": payload.get("s", "").lower(),
-                "event_ts": parse_event_ts(payload, type_),
+                "s": f"{symbol}@{event_type}",
+                "event_ts": parse_event_ts(payload.get("data", {}), type_),
                 "ingest_ts": datetime.now(timezone.utc).isoformat(),
                 "payload": json.dumps(payload)
             }
