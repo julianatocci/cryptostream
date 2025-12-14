@@ -87,6 +87,6 @@ tickers_dag = create_job_loop_dag(
 # DAG 4: orderbook
 orderbook_dag = create_job_loop_dag(
     dag_id="cryptostream_orderbook_pipeline",
-    job_name="cryptostream-orderbook-pi",
+    job_name="cryptostream-orderbook-pipeline",
     description="Loop contínuo da pipeline de orderbook via Cloud Run Jobs",
 )
